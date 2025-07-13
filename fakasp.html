@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Удостоверение личности</title>
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Удостоверение">
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+    <link rel="apple-touch-startup-image" href="/assets/apple-touch-startup-image.png">
+    <link rel="manifest" href="/manifest.json">    
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            margin: 0;
+            background-color: #f0f2f5;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            touch-action: pan-y;
+        }
+
+        /* Шапка и вкладки теперь статичны */
+        .title-bar {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            padding-top: calc(10px + env(safe-area-inset-top));
+            background-color: #fff;
+            border-bottom: 1px solid #ccc;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            flex-shrink: 0;
+            position: relative; /* Needed for absolute positioning of back arrow */
+            justify-content: center; /* Horizontally centers content */
+        }
+        .back-arrow {
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            /* Position the back arrow absolutely to keep it on the left while title is centered */
+            position: absolute;
+            left: 15px; /* Adjust as needed for desired spacing from the left edge */
+            -webkit-tap-highlight-color: transparent;
+        }
+        .back-arrow span {
+            font-size: 24px;
+            color: red;
+            transform: translateY(-1px);
+        }
+        .title-bar span.page-title {
+            font-size: 18px;
+            margin-left: 0; /* Removed this margin to allow centering */
+            color: #000;
+            font-weight: bold;
+            text-align: center; /* Ensure text itself is centered within its span */
+            flex-grow: 1; /* Allow the title to take available space for centering */
+        }
+
+        .tabs-container {
+            background-color: #fff;
+            padding: 8px 15px;
+            border-bottom: 1px solid #ccc;
+            flex-shrink: 0;
+        }
+        .tabs {
+            display: flex;
+            border: 1px solid #e00000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            color: #e00000;
+            background-color: #fff;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            border-right: 1px solid #e00000;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .tab:last-child {
+            border-right: none;
+        }
+        .tab.active {
+            background-color: #e00000;
+            color: white;
+            border-right: none;
+        }
+
+        /* Главный контейнер для свайпа */
+        .main-container {
+            display: flex;
+            width: 200vw;
+            transition: transform 0.3s ease-out; /* Changed from cubic-bezier to ease-out */
+            flex-grow: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .screen {
+            width: 100vw;
+            flex-shrink: 0;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* --- Стили для первого экрана (Документ) --- */
+        .screen-document .content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding-bottom: 15px;
+            padding-bottom: calc(15px + env(safe-area-inset-bottom));
+        }
+        .screen-document .card-placeholder {
+            height: 480px; /* СЛЕГКА УМЕНЬШЕНО В ДЛИННЕ */
+            margin: 15px;
+            border-radius: 10px;
+            background-color: #e0f2f1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            color: #777;
+            border: 1px dashed #a7d9d5;
+            text-align: center;
+            line-height: 1.5;
+            overflow: hidden; /* Обрезаем все, что выходит за рамки */
+            position: relative; /* Для позиционирования кнопки загрузки */
+        }
+
+        /* Стили для изображения внутри card-placeholder */
+        .screen-document .card-placeholder img {
+            max-width: 110%; /* Максимальная ширина 100% от родителя */
+            max-height: 110%; /* Максимальная высота 100% от родителя */
+            width: auto; /* Позволяем ширине подстраиваться по пропорциям */
+            height: auto; /* Позволяем высоте подстраиваться по пропорциям */
+            object-fit: contain; /* Вписывает изображение целиком, сохраняя пропорции */
+            border-radius: 10px; /* Применяем border-radius к изображению */
+            display: none; /* Скрыто по умолчанию, пока не загружено фото */
+        }
+
+        /* Стили для кнопки загрузки фото */
+        .upload-photo-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            -webkit-appearance: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .upload-photo-button:active {
+            background-color: #0056b3;
+        }
+        /* Стили для скрытого инпута */
+        .hidden-file-input {
+            display: none;
+        }
+
+        .screen-document .buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin: 0 15px;
+        }
+        /* --- Стили для общих кнопок (Предъявить, Отправить) --- */
+        .button {
+            width: 100%;
+            max-width: 300px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 17px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-appearance: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .button img { /* Style for icons - KEEP if you use image for QR */
+            margin-right: 10px;
+            width: 24px;
+            height: 24px;
+        }
+        .button:active {
+            background-color: #0056b3;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button.secondary {
+            background-color: transparent;
+            border: 1px solid #007bff;
+            color: #007bff;
+            box-shadow: none;
+        }
+        .button.secondary:active {
+            background-color: #e6f0ff;
+            color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        /* Style for the SVG share icon */
+        .share-icon-svg {
+            margin-right: 10px;
+            width: 24px;
+            height: 24px;
+            fill: none;
+            stroke: currentColor; /* Inherits color from parent button text */
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* NEW CSS FOR SIMPLIFIED QR-CODE ICON (Blue square with white outline, white plus, 4 white squares, and edge strips) */
+        .qr-code-icon-simplified {
+            /* База для иконки: синий квадрат с белой рамкой */
+            width: 24px; /* Измените размер по необходимости */
+            height: 24px; /* Измените размер по необходимости */
+            background-color: #007bff; /* Синий фон */
+            border: 2px solid white; /* Белая рамка */
+            border-radius: 3px; /* Слегка закругленные углы */
+            position: relative; /* Для позиционирования всех внутренних элементов */
+            overflow: hidden; /* Гарантирует, что содержимое не выходит за пределы */
+            margin-right: 10px; /* Отступ от текста */
+            flex-shrink: 0; /* Предотвращает сжатие во flex-контейнере */
+            
+            /* Центрирование плюса */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Плюс: вертикальная и горизонтальная линии */
+        .qr-code-icon-simplified::before,
+        .qr-code-icon-simplified::after {
+            content: '';
+            display: block;
+            position: absolute;
+            background-color: white; /* Белый цвет для плюса */
+            z-index: 2; /* Чтобы плюс был поверх полосок и маленьких квадратов */
+        }
+
+        /* Вертикальная линия плюса */
+        .qr-code-icon-simplified::before {
+            width: 2px;
+            height: 12px;
+        }
+
+        /* Горизонтальная линия плюса */
+        .qr-code-icon-simplified::after {
+            width: 12px;
+            height: 2px;
+        }
+
+        /* Маленькие белые квадраты по углам плюса */
+        .qr-code-icon-simplified .corner-square {
+            display: block; /* Сделать его блочным элементом */
+            position: absolute;
+            width: 3px;  /* Размер маленького квадрата */
+            height: 3px; /* Размер маленького квадрата */
+            background-color: white; /* Белый цвет */
+            z-index: 1; /* Чтобы быть под плюсом, но над полосками */
+        }
+
+        /* Позиционирование каждого из 4-х угловых квадратов */
+        .qr-code-icon-simplified .top-left {
+            top: 6px; /* Регулируем позицию от верхнего края */
+            left: 6px; /* Регулируем позицию от левого края */
+        }
+
+        .qr-code-icon-simplified .top-right {
+            top: 6px;
+            right: 6px;
+        }
+
+        .qr-code-icon-simplified .bottom-left {
+            bottom: 6px;
+            left: 6px;
+        }
+
+        .qr-code-icon-simplified .bottom-right {
+            bottom: 6px;
+            right: 6px;
+        }
+
+        /* Новые белые полоски по ребрам */
+        .qr-code-icon-simplified .edge-strip {
+            display: block;
+            position: absolute;
+            background-color: white; /* Белый цвет для полосок */
+            z-index: 0; /* Чтобы быть под плюсом и маленькими квадратами */
+        }
+
+        /* Верхняя полоска */
+        .qr-code-icon-simplified .strip-top {
+            top: 2px; /* Отступ от белой рамки */
+            left: 7px; /* Отступ от левого края */
+            width: 15px; /* Ширина полоски */
+            height: 2px; /* Высота полоски */
+        }
+
+        /* Нижняя полоска */
+        .qr-code-icon-simplified .strip-bottom {
+            bottom: 2px; /* Отступ от белой рамки */
+            left: 7px; /* Отступ от левого края */
+            width: 15px; /* Ширина полоски */
+            height: 2px; /* Высота полоски */
+        }
+
+        /* Левая полоска */
+        .qr-code-icon-simplified .strip-left {
+            left: 2px; /* Отступ от белой рамки */
+            top: 7px; /* Отступ от верхнего края */
+            width: 2px; /* Ширина полоски */
+            height: 15px; /* Высота полоски */
+        }
+
+        /* Правая полоска */
+        .qr-code-icon-simplified .strip-right {
+            right: 2px; /* Отступ от белой рамки */
+            top: 7px; /* Отступ от верхнего края */
+            width: 2px; /* Ширина полоски */
+            height: 15px; /* Высота полоски */
+        }
+
+        /* Состояние при активации/нажатии на кнопку */
+        .button:active .qr-code-icon-simplified {
+            background-color: #0056b3; /* Более темный синий фон */
+            border-color: white; /* Сохраняем белую рамку */
+        }
+
+        /* --- Стили для экрана Реквизиты --- */
+        .screen-details .content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding-bottom: 15px;
+            padding-bottom: calc(15px + env(safe-area-inset-bottom));
+            background-color: #fff;
+            padding-top: 15px;
+        }
+
+        .details-field-list {
+            padding: 0 15px;
+        }
+
+        .field-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee; /* Added back for separation */
+        }
+        .field-row:last-child {
+            border-bottom: none; /* No border for the last item */
+        }
+
+        .field-info {
+            flex-grow: 1;
+        }
+        .field-label {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 2px;
+        }
+        /* Style for editable input fields */
+        .field-value-input {
+            width: 100%;
+            padding: 8px 0;
+            border: none;
+            font-size: 16px;
+            color: #333;
+            font-weight: 500;
+            outline: none; /* Remove outline on focus */
+            background-color: transparent;
+            box-sizing: border-box; /* Include padding in width */
+            -webkit-appearance: none; /* Remove default styling on iOS */
+        }
+        /* Focus style for input fields */
+        .field-value-input:focus {
+            border-bottom: 1px solid #007bff; /* Highlight on focus */
+        }
+
+        .copy-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+            margin-left: 10px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .copy-icon::before, .copy-icon::after {
+            content: '';
+            position: absolute;
+            background-color: white;
+            border: 2px solid #ccc;
+            border-radius: 3px;
+            width: 12px;
+            height: 12px;
+        }
+        .copy-icon::before {
+            top: 0;
+            left: 0;
+            z-index: 1;
+            transform: translateX(4px) translateY(4px);
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+        }
+        .copy-icon::after {
+            top: 0;
+            left: 0;
+            z-index: 2;
+            transform: translateX(0px) translateY(0px);
+            box-shadow: 0 0 2px rgba(0,0,0,0.15);
+        }
+
+        .send-details-button-container {
+            padding: 0 15px;
+            margin-top: auto;
+            padding-bottom: 15px;
+            padding-bottom: calc(15px + env(safe-area-inset-bottom));
+        }
+        /* Apply the secondary button styles to the send-details-button */
+        .send-details-button {  
+            background-color: transparent; /* Changed to transparent */
+            border: 1px solid #007bff; /* Blue border */
+            color: #007bff; /* Blue text */
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 17px;
+            font-weight: bold;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: none; /* No shadow by default for secondary style */
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; /* Include box-shadow in transition */
+            -webkit-appearance: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .send-details-button:active {  
+            background-color: #e6f0ff; /* Light blue background on active */
+            color: #0056b3; /* Darker blue text on active */
+            border-color: #0056b3; /* Darker blue border on active */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Subtle shadow on active */
+        }
+
+        /* NEW MODAL STYLES */
+        /* Overlay for the modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: flex-end; /* Align to the bottom */
+            z-index: 1000; /* Ensure it's on top */
+            visibility: hidden; /* Hidden by default */
+            opacity: 0; /* Fully transparent by default */
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.visible {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Modal content box */
+        .modal-content {
+            background-color: white;
+            width: 100%;
+            max-width: 500px; /* Max width for larger screens */
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            transform: translateY(100%); /* Start off-screen at the bottom */
+            transition: transform 0.3s ease-out; /* Smooth slide-up animation */
+            display: flex;
+            flex-direction: column;
+            max-height: 90vh; /* Make sure it doesn't take full height on small screens */
+            overflow: hidden; /* Hide overflowing content */
+            padding-bottom: env(safe-area-inset-bottom); /* Respect safe area for iPhone X and later */
+        }
+
+        .modal-overlay.visible .modal-content {
+            transform: translateY(0); /* Slide up to visible position */
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .modal-close-button {
+            background: none;
+            border: none;
+            font-size: 30px;
+            color: #888;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 5px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .modal-body {
+            padding: 20px 15px;
+            flex-grow: 1; /* Allows body to take available space */
+            overflow-y: auto; /* Enable scrolling if content is too long */
+            text-align: center;
+            color: #555;
+            line-height: 1.6;
+        }
+        /* Style for the "или скажите код" text */
+        .modal-body .or-say-code {
+            font-size: 14px;
+            color: #888;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+        /* Style for the code itself */
+        .modal-body .display-code {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            letter-spacing: 2px;
+        }
+
+
+        .qr-code-display {
+            margin-top: 20px;
+        }
+
+        .modal-footer {
+            padding: 15px;
+            border-top: 1px solid #eee;
+            text-align: center;
+        }
+
+        .full-width-button {
+            width: 100%;
+            max-width: 300px; /* Match existing button max-width */
+            margin: 0 auto; /* Center the button */
+        }
+
+        /* Ensure existing button styles apply to modal buttons too */
+        .modal-footer .button.secondary {
+            background-color: transparent;
+            border: 1px solid #007bff;
+            color: #007bff;
+            box-shadow: none;
+        }
+        .modal-footer .button.secondary:active {
+            background-color: #e6f0ff;
+            color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        /* Original CSS for the placeholder QR code (now replaced in HTML) */
+        .css-qr-code-placeholder {
+            width: 150px;
+            height: 150px;
+            background-color: #fff;
+            border: 1px solid #333;
+            margin: 20px auto 0;
+            display: grid;
+            grid-template-columns: repeat(25, 1fr);
+            grid-template-rows: repeat(25, 1fr);
+            gap: 0px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .css-qr-code-placeholder .module {
+            background-color: #333;
+            opacity: 1;
+        }
+
+        .top-left-finder, .top-right-finder, .bottom-left-finder {
+            background-color: transparent;
+            border: 3px solid #333;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .top-left-finder {
+            grid-column: 1 / span 7;
+            grid-row: 1 / span 7;
+        }
+
+        .top-right-finder {
+            grid-column: 19 / span 7;
+            grid-row: 1 / span 7;
+        }
+
+        .bottom-left-finder {
+            grid-column: 1 / span 7;
+            grid-row: 19 / span 7;
+        }
+
+        .top-left-finder::before,
+        .top-right-finder::before,
+        .bottom-left-finder::before {
+            content: '';
+            width: 60%;
+            height: 60%;
+            background-color: #fff;
+            border: 3px solid #333;
+        }
+
+        .pattern-data-area {
+            grid-column: 1 / span 25;
+            grid-row: 1 / span 25;
+            background-color: transparent;
+            display: grid;
+            grid-template-columns: repeat(25, 1fr);
+            grid-template-rows: repeat(25, 1fr);
+            gap: 0px;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+
+        .pattern-data-area .dark-module {
+            background-color: #333;
+        }
+        .pattern-data-area .light-module {
+            background-color: #fff;
+        }
+
+        .alignment-pattern {
+            width: 5px;
+            height: 5px;
+            background-color: #fff;
+            border: 1px solid #333;
+            position: relative;
+            z-index: 1;
+        }
+        .alignment-pattern::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50%;
+            height: 50%;
+            background-color: #333;
+        }
+
+        .alignment-bottom-right {
+            grid-column: 18 / span 5;
+            grid-row: 18 / span 5;
+            border: 3px solid #333;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .alignment-bottom-right::before {
+            content: '';
+            width: 50%;
+            height: 50%;
+            background-color: #333;
+            border: 1px solid #333;
+        }
+
+        .random-dot {
+            background-color: #333;
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            z-index: 2;
+        }
+
+        .random-line {
+            background-color: #333;
+            position: absolute;
+            z-index: 2;
+        }
+
+        /* NEW LOADING OVERLAY STYLES */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white; /* White background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000; /* Ensure it's above everything else */
+            visibility: hidden; /* Hidden by default */
+            opacity: 0; /* Fully transparent by default */
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .loading-overlay.visible {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .loader {
+            border: 5px solid #f3f3f3; /* Light grey border */
+            border-top: 5px solid red; /* Red top border for the spinner effect */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite; /* Spinning animation */
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <div class="back-arrow"><span>&larr;</span></div>
+        <span class="page-title">Удостоверение личности</span>
+    </div>
+
+    <div class="tabs-container">
+        <div class="tabs">
+            <div class="tab active" id="tabDocument">Документ</div>
+            <div class="tab" id="tabDetails">Реквизиты</div>
+        </div>
+    </div>
+
+    <div class="main-container" id="mainContainer">
+        <div class="screen screen-document" id="screenDocument">
+            <div class="content">
+                <div class="card-placeholder" id="cardPlaceholder">
+                    <button class="upload-photo-button" id="uploadPhotoButton">Загрузить фото</button>
+                    <input type="file" id="fileInput" accept="image/*" class="hidden-file-input">
+                    <img id="uploadedImage" src="#" alt="Изображение удостоверения личности">
+                </div>
+                <div class="buttons">
+                    <button class="button" id="presentDocumentButton">
+                        <div class="qr-code-icon-simplified">
+                            <div class="corner-square top-left"></div>
+                            <div class="corner-square top-right"></div>
+                            <div class="corner-square bottom-left"></div>
+                            <div class="corner-square bottom-right"></div>
+                            <div class="edge-strip strip-top"></div>
+                            <div class="edge-strip strip-bottom"></div>
+                            <div class="edge-strip strip-left"></div>
+                            <div class="edge-strip strip-right"></div>
+                        </div>
+                        Предъявить документ
+                    </button>
+                    <button class="button secondary" id="sendDocumentButton"> <svg class="share-icon-svg" viewBox="0 0 24 24">
+                                <path d="M12 17V3M12 3L7 8M12 3L17 8M21 16V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V16" />
+                        </svg>
+                        Отправить документ
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="screen screen-details" id="screenDetails">
+            <div class="content">
+                <div class="details-field-list">
+                    <div class="field-row">
+                        <div class="field-info">
+                            <div class="field-label">ФИО</div>
+                            <input type="text" class="field-value-input" id="fio" value="Хамитов Ермахан Маликұлы">
+                        </div>
+                        <div class="copy-icon" data-field-id="fio"></div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-info">
+                            <div class="field-label">ИИН</div>
+                            <input type="text" class="field-value-input" id="iin" value="030901553562">
+                        </div>
+                        <div class="copy-icon" data-field-id="iin"></div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-info">
+                            <div class="field-label">Дата рождения</div>
+                            <input type="text" class="field-value-input" id="dob" value="01.09.2003">
+                        </div>
+                        <div class="copy-icon" data-field-id="dob"></div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-info">
+                            <div class="field-label">Номер документа</div>
+                            <input type="text" class="field-value-input" id="docNumber" value="023341873">
+                        </div>
+                        <div class="copy-icon" data-field-id="docNumber"></div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-info">
+                            <div class="field-label">Дата выдачи</div>
+                            <input type="text" class="field-value-input" id="issueDate" value="08.09.2019">
+                        </div>
+                        <div class="copy-icon" data-field-id="issueDate"></div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-info">
+                            <div class="field-label">Срок действия</div>
+                            <input type="text" class="field-value-input" id="expiryDate" value="07.09.2029">
+                        </div>
+                        <div class="copy-icon" data-field-id="expiryDate"></div>
+                    </div>
+                </div>
+
+                <div class="send-details-button-container">
+                    <button class="send-details-button" id="sendDetailsButton">
+                        <svg class="share-icon-svg" viewBox="0 0 24 24">
+                                <path d="M12 17V3M12 3L7 8M12 3L17 8M21 16V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V16" />
+                        </svg>
+                        Отправить реквизиты
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="presentDocumentModalOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Удостоверение личности</span>
+                <button class="modal-close-button" id="closeModalButton">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Покажите QR-код сотруднику</p>
+                <div class="qr-code-display" style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    width: 150px;
+                    height: 150px;
+                    margin: 20px auto 0;
+                    border: 1px dashed #a7d9d5; /* Optional: dashed border like the main image placeholder */
+                    border-radius: 10px; /* Match existing style */
+                    overflow: hidden; /* Ensure image fits */
+                    position: relative; /* For positioning internal elements */
+                ">
+                    <button class="upload-photo-button" id="uploadQrCodeButton" style="position: absolute; z-index: 2;">Загрузить фото</button>
+                    <input type="file" id="qrCodeFileInput" accept="image/*" class="hidden-file-input">
+                    <img id="modalUploadedQrCode" src="#" alt="QR-код" style="display: none; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 10px; position: absolute; z-index: 1;">
+                </div>
+                <p class="or-say-code">или скажите код</p>
+                <p class="display-code">470566</p>
+            </div>
+            <div class="modal-footer">
+                </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabDocument = document.getElementById('tabDocument');
+            const tabDetails = document.getElementById('tabDetails');
+            const screenDocument = document.getElementById('screenDocument');
+            const screenDetails = document.getElementById('screenDetails');
+            const mainContainer = document.getElementById('mainContainer');
+            const presentDocumentButton = document.getElementById('presentDocumentButton');
+            const presentDocumentModalOverlay = document.getElementById('presentDocumentModalOverlay');
+            const closeModalButton = document.getElementById('closeModalButton');
+            const backArrow = document.querySelector('.back-arrow');
+            const sendDocumentButton = document.getElementById('sendDocumentButton'); // Get the "Отправить документ" button
+            const loadingOverlay = document.getElementById('loadingOverlay'); // Get the loading overlay
+
+            let currentScreenIndex = 0; // 0 for Document, 1 for Details
+
+            function showDocumentScreen() {
+                mainContainer.style.transform = 'translateX(0vw)';
+                tabDocument.classList.add('active');
+                tabDetails.classList.remove('active');
+                currentScreenIndex = 0;
+            }
+
+            function showDetailsScreen() {
+                mainContainer.style.transform = 'translateX(-100vw)';
+                tabDetails.classList.add('active');
+                tabDocument.classList.remove('active');
+                currentScreenIndex = 1;
+            }
+
+            tabDocument.addEventListener('click', showDocumentScreen);
+            tabDetails.addEventListener('click', showDetailsScreen);
+            
+            // Modify the backArrow event listener
+            backArrow.addEventListener('click', () => {
+                loadingOverlay.classList.add('visible'); // Show loading screen
+                setTimeout(() => {
+                    loadingOverlay.classList.remove('visible'); // Hide loading screen after 1.5 seconds
+                    showDocumentScreen(); // Then go to document screen
+                }, 60000); // 1.5 seconds delay
+            }); 
+
+            // Image upload logic for main document
+            const cardPlaceholder = document.getElementById('cardPlaceholder');
+            const uploadPhotoButton = document.getElementById('uploadPhotoButton');
+            const fileInput = document.getElementById('fileInput');
+            const uploadedImage = document.getElementById('uploadedImage');
+
+            // Function to load saved main document image
+            function loadSavedMainImage() {
+                const savedImage = localStorage.getItem('mainDocumentImage');
+                if (savedImage) {
+                    uploadedImage.src = savedImage;
+                    uploadedImage.style.display = 'block';
+                    if (uploadPhotoButton) {
+                        uploadPhotoButton.style.display = 'none';
+                    }
+                    if (cardPlaceholder) {
+                        cardPlaceholder.style.border = 'none';
+                    }
+                } else {
+                    uploadedImage.style.display = 'none';
+                    uploadedImage.src = '#';
+                    if (uploadPhotoButton) {
+                        uploadPhotoButton.style.display = 'block';
+                    }
+                    if (cardPlaceholder) {
+                        cardPlaceholder.style.border = '1px dashed #a7d9d5';
+                    }
+                }
+            }
+
+            if (uploadPhotoButton) {
+                uploadPhotoButton.addEventListener('click', () => {
+                    fileInput.click();
+                });
+            }
+
+            if (fileInput) {
+                fileInput.addEventListener('change', (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const imageDataUrl = e.target.result;
+                            uploadedImage.src = imageDataUrl;
+                            uploadedImage.style.display = 'block';
+                            uploadPhotoButton.style.display = 'none';
+                            cardPlaceholder.style.border = 'none';
+                            // Save to localStorage
+                            localStorage.setItem('mainDocumentImage', imageDataUrl);
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        uploadedImage.style.display = 'none';
+                        uploadedImage.src = '#';
+                        uploadPhotoButton.style.display = 'block';
+                        cardPlaceholder.style.border = '1px dashed #a7d9d5';
+                        // Clear from localStorage
+                        localStorage.removeItem('mainDocumentImage');
+                    }
+                });
+            }
+
+            // Call loadSavedMainImage on page load
+            loadSavedMainImage();
+
+            // Copy to clipboard logic for details screen fields
+            document.querySelectorAll('.copy-icon').forEach(icon => {
+                icon.addEventListener('click', (event) => {
+                    const fieldId = event.currentTarget.dataset.fieldId;
+                    const inputField = document.getElementById(fieldId);
+                    if (inputField) {
+                        navigator.clipboard.writeText(inputField.value)
+                            .then(() => {
+                                // Optional: Provide visual feedback that text was copied
+                                console.log('Text copied to clipboard: ' + inputField.value);
+                            })
+                            .catch(err => {
+                                console.error('Failed to copy text: ', err);
+                            });
+                    }
+                });
+            });
+
+            // Swipe functionality
+            let startX;
+            let currentX;
+            let isSwiping = false;
+            const swipeThreshold = 50; // pixels
+
+            mainContainer.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                isSwiping = true;
+                mainContainer.style.transition = 'none'; // Disable transition during swipe
+            }, { passive: true }); // Use passive listener for better scroll performance
+
+            mainContainer.addEventListener('touchmove', (e) => {
+                if (!isSwiping) return;
+                currentX = e.touches[0].clientX;
+                const diff = currentX - startX;
+                
+                // Restrict swipe based on current screen
+                if (currentScreenIndex === 0 && diff > 0) { // On document screen, can't swipe further right
+                    mainContainer.style.transform = `translateX(0vw)`;
+                } else if (currentScreenIndex === 1 && diff < 0) { // On details screen, can't swipe further left
+                    mainContainer.style.transform = `translateX(-100vw)`;
+                } else {
+                    mainContainer.style.transform = `translateX(calc(${-currentScreenIndex * 100}vw + ${diff}px))`;
+                }
+            }, { passive: true }); // Use passive listener
+
+            mainContainer.addEventListener('touchend', (e) => {
+                if (!isSwiping) return;
+                isSwiping = false;
+                mainContainer.style.transition = 'transform 0.3s ease-out'; // Re-enable transition
+
+                const diff = currentX - startX;
+
+                if (diff < -swipeThreshold && currentScreenIndex === 0) { // Swiped left enough from document screen
+                    showDetailsScreen();
+                } else if (diff > swipeThreshold && currentScreenIndex === 1) { // Swiped right enough from details screen
+                    showDocumentScreen();
+                } else {
+                    // Snap back to the current screen if swipe was not enough
+                    if (currentScreenIndex === 0) {
+                        showDocumentScreen();
+                    } else {
+                        showDetailsScreen();
+                    }
+                }
+            });
+
+            // Handlers for the new modal window (QR code display)
+            const qrCodeDisplay = document.querySelector('.modal-body .qr-code-display');
+            const uploadQrCodeButton = document.getElementById('uploadQrCodeButton');
+            const qrCodeFileInput = document.getElementById('qrCodeFileInput');
+            const modalUploadedQrCode = document.getElementById('modalUploadedQrCode');
+
+            // Function to load saved QR code image
+            function loadSavedQrCode() {
+                const savedQrCode = localStorage.getItem('qrCodeImage');
+                if (savedQrCode) {
+                    modalUploadedQrCode.src = savedQrCode;
+                    modalUploadedQrCode.style.display = 'block';
+                    if (uploadQrCodeButton) {
+                        uploadQrCodeButton.style.display = 'none';
+                    }
+                    if (qrCodeDisplay) {
+                        qrCodeDisplay.style.border = 'none';
+                    }
+                } else {
+                    modalUploadedQrCode.style.display = 'none';
+                    modalUploadedQrCode.src = '#';
+                    if (uploadQrCodeButton) {
+                        uploadQrCodeButton.style.display = 'block';
+                    }
+                    if (qrCodeDisplay) {
+                        qrCodeDisplay.style.border = '1px dashed #a7d9d5';
+                    }
+                }
+            }
+
+            presentDocumentButton.addEventListener('click', () => {
+                presentDocumentModalOverlay.classList.add('visible');
+                // On modal open, load saved QR code
+                loadSavedQrCode();
+                console.log('Показать модальное окно предъявления документа');
+            });
+
+            closeModalButton.addEventListener('click', () => {
+                presentDocumentModalOverlay.classList.remove('visible');
+            });
+
+            // Close modal if overlay is clicked (optional, but good for UX)
+            presentDocumentModalOverlay.addEventListener('click', (e) => {
+                if (e.target === presentDocumentModalOverlay) {
+                    presentDocumentModalOverlay.classList.remove('visible');
+                }
+            });
+
+            if (uploadQrCodeButton) {
+                uploadQrCodeButton.addEventListener('click', () => {
+                    qrCodeFileInput.click();
+                });
+            }
+
+            if (qrCodeFileInput) {
+                qrCodeFileInput.addEventListener('change', (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const imageDataUrl = e.target.result;
+                            modalUploadedQrCode.src = imageDataUrl;
+                            modalUploadedQrCode.style.display = 'block';
+                            uploadQrCodeButton.style.display = 'none';
+                            if (qrCodeDisplay) {
+                                qrCodeDisplay.style.border = 'none';
+                            }
+                            // Save to localStorage
+                            localStorage.setItem('qrCodeImage', imageDataUrl);
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        modalUploadedQrCode.style.display = 'none';
+                        modalUploadedQrCode.src = '#';
+                        uploadQrCodeButton.style.display = 'block';
+                        if (qrCodeDisplay) {
+                            qrCodeDisplay.style.border = '1px dashed #a7d9d5';
+                        }
+                        // Clear from localStorage
+                        localStorage.removeItem('qrCodeImage');
+                    }
+                });
+            }
+
+            // Initialize QR code display on page load (in case modal is opened directly or on refresh)
+            loadSavedQrCode();
+
+            // Function to clear all loaded images
+            function clearAllImages() {
+                // Clear main document image
+                localStorage.removeItem('mainDocumentImage');
+                uploadedImage.style.display = 'none';
+                uploadedImage.src = '#';
+                uploadPhotoButton.style.display = 'block';
+                cardPlaceholder.style.border = '1px dashed #a7d9d5';
+
+                // Clear QR code image
+                localStorage.removeItem('qrCodeImage');
+                modalUploadedQrCode.style.display = 'none';
+                modalUploadedQrCode.src = '#';
+                uploadQrCodeButton.style.display = 'block';
+                if (qrCodeDisplay) {
+                    qrCodeDisplay.style.border = '1px dashed #a7d9d5';
+                }
+            }
+
+            // Add event listener to the "Отправить документ" button
+            if (sendDocumentButton) {
+                sendDocumentButton.addEventListener('click', () => {
+                    clearAllImages();
+                    // Optionally, provide feedback to the user, e.g., an alert or a toast message
+                    alert('Все загруженные изображения удалены!'); 
+                    console.log('Все загруженные изображения удалены.');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
